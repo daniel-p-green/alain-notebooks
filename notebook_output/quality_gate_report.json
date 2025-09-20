@@ -1,0 +1,14 @@
+{
+  "determinism": true,
+  "env_hygiene": true,
+  "failure_handling": true,
+  "transparency": true,
+  "export_parity": true,
+  "details": {
+    "verified_notebook": "notebook_output/lite_openai-gpt-oss-20b-beginner_1758392427.verified.ipynb",
+    "freeze_file": "/Users/danielgreen/Documents/GitHub/alain-notebooks/notebook_output/requirements-freeze.txt",
+    "env_example": "/Users/danielgreen/Documents/GitHub/alain-notebooks/.env.example",
+    "secret_suspects": [],
+    "checksum": "bd2469217e278892674551b71660c931095b45c241d123566f4d150751ea2466"
+  }
+}

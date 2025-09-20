@@ -1,0 +1,48 @@
+{
+  "title": "Lite Notebook \u00b7 openai/gpt-oss-20b \u00b7 Beginner",
+  "description": "Token\u2011light tutorial: environment setup + runnable calls. Uses OpenAI SDK against selected provider (Poe/OpenAI\u2011compatible/local).",
+  "provider": "poe",
+  "model": "gpt-oss-20b",
+  "learning_objectives": [
+    "Configure provider and API key correctly",
+    "Run a model call with safe defaults",
+    "Tune basic parameters and/or streaming",
+    "Record simple telemetry or ranking step"
+  ],
+  "steps": [
+    {
+      "step_order": 1,
+      "title": "Environment & Client Setup",
+      "content": "Configure an OpenAI-compatible client pointed at Poe and confirm the model you plan to use.",
+      "code": "# Step 1: Environment & Client Setup\n# Install lightweight helpers for local experimentation.\n%pip install --quiet openai python-dotenv\n\nfrom __future__ import annotations\n\nimport os\nfrom pathlib import Path\n\ntry:\n    from dotenv import load_dotenv\nexcept ImportError:\n    load_dotenv = None\n\n\ndef _ingest_env_file(path: Path) -> None:\n    '''Load key=value pairs without overwriting existing values.'''\n\n    if load_dotenv:\n        load_dotenv(path, override=False)\n        return\n    for line in path.read_text(encoding=\"utf-8\").splitlines():\n        stripped = line.strip()\n        if not stripped or stripped.startswith(\"#\") or \"=\" not in stripped:\n            continue\n        key, value = stripped.split(\"=\", 1)\n        os.environ.setdefault(key.strip(), value.strip())\n\n\nfor candidate in (Path(\".env\"), Path(\".env.local\")):\n    if candidate.exists():\n        _ingest_env_file(candidate)\n\nif os.getenv(\"POE_API_KEY\") and not os.getenv(\"OPENAI_API_KEY\"):\n    os.environ[\"OPENAI_API_KEY\"] = os.environ[\"POE_API_KEY\"]\n\nBASE_URL = os.environ.setdefault(\"OPENAI_BASE_URL\", \"https://api.poe.com/v1\")\nAPI_KEY = os.getenv(\"OPENAI_API_KEY\")\nif not API_KEY:\n    raise RuntimeError(\"Set POE_API_KEY or OPENAI_API_KEY before continuing.\")\n\nfrom openai import OpenAI\n\nMODEL_ID = \"gpt-oss-20b\"\nclient = OpenAI(base_url=BASE_URL, api_key=API_KEY)\n\nprint(f\"Base URL \u2192 {BASE_URL}\")\nprint(f\"Client ready for model \u2192 {MODEL_ID}\")\n"
+    },
+    {
+      "step_order": 2,
+      "title": "First Chat Completion",
+      "content": "Send your brief to the model with safe defaults and review the reply.",
+      "code": "            # Step 2: First Chat Completion\n            # Draft a short helper that sends the user brief to the model once.\n\n            def run_once(prompt: str) -> str:\n                '''Call the Poe-hosted model with safe defaults and return the text.'''\n\n                response = client.chat.completions.create(\n                    model=MODEL_ID,\n                    messages=[\n                        {\"role\": \"system\", \"content\": \"You are a patient teacher.\"},\n                        {\"role\": \"user\", \"content\": prompt},\n                    ],\n                    max_tokens=320,\n                    temperature=0.6,\n                )\n                choice = response.choices[0].message.content\n                print(f\"Prompt tokens \u2192 {response.usage.prompt_tokens}, completion \u2192 {response.usage.completion_tokens}\")\n                return choice\n\n\n            first_reply = run_once('Show me a minimal streaming chat example with tips.')\n            print(\"\nModel reply:\n\")\n            print(first_reply)\n"
+    },
+    {
+      "step_order": 3,
+      "title": "Adjust Parameters",
+      "content": "Contrast two temperatures to see how the narrative changes.",
+      "code": "            # Step 3: Adjust Parameters\n            # Compare two temperatures to see how tone and verbosity change.\n\n            def compare_temperatures(prompt: str, temperatures: tuple[float, float]) -> None:\n                for temp in temperatures:\n                    print(f\"\n--- Temperature {temp} ---\")\n                    reply = client.chat.completions.create(\n                        model=MODEL_ID,\n                        messages=[\n                            {\"role\": \"system\", \"content\": \"You teach with concise, friendly explanations.\"},\n                            {\"role\": \"user\", \"content\": prompt},\n                        ],\n                        max_tokens=280,\n                        temperature=temp,\n                    )\n                    print(reply.choices[0].message.content.strip())\n\n\n            compare_temperatures({safe_brief}, (0.2, 0.8))\n",
+      "model_params": {
+        "temperature": 0.6
+      }
+    }
+  ],
+  "assessments": [
+    {
+      "question": "Which env var provides the Poe key?",
+      "options": [
+        "OPENAI_BASE_URL",
+        "POE_API_KEY",
+        "NEXT_RUNTIME",
+        "HF_TOKEN"
+      ],
+      "correct_index": 1,
+      "explanation": "Poe auth uses POE_API_KEY; the code maps it to OPENAI_API_KEY at runtime."
+    }
+  ]
+}

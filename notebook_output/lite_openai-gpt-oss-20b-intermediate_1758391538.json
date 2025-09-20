@@ -1,0 +1,54 @@
+{
+  "title": "Lite Notebook \u00b7 openai/gpt-oss-20b \u00b7 Intermediate",
+  "description": "Token\u2011light tutorial: environment setup + runnable calls. Uses OpenAI SDK against selected provider (Poe/OpenAI\u2011compatible/local).",
+  "provider": "poe",
+  "model": "gpt-oss-20b",
+  "learning_objectives": [
+    "Configure provider and API key correctly",
+    "Run a model call with safe defaults",
+    "Tune basic parameters and/or streaming",
+    "Record simple telemetry or ranking step"
+  ],
+  "steps": [
+    {
+      "step_order": 1,
+      "title": "Streaming Basics",
+      "content": "Use streaming to improve perceived latency, but start by verifying your Poe environment variables map into the OpenAI SDK.",
+      "code_template": "Explain streaming vs. non\u2011streaming and when to use each.",
+      "code": "import os\nfrom textwrap import dedent\n\nfrom openai import OpenAI\n\nPOE_KEY = os.getenv(\"POE_API_KEY\")\nif not os.getenv(\"OPENAI_API_KEY\") and POE_KEY:\n    os.environ[\"OPENAI_API_KEY\"] = POE_KEY\n\napi_key = os.getenv(\"OPENAI_API_KEY\")\nif not api_key:\n    raise RuntimeError(\"Set POE_API_KEY (preferred) or OPENAI_API_KEY before running this notebook.\")\n\nbase_url = os.getenv(\"OPENAI_BASE_URL\") or \"https://api.poe.com/v1\"\nos.environ[\"OPENAI_BASE_URL\"] = base_url\n\nclient = OpenAI(api_key=api_key, base_url=base_url)\n\nexplanation = dedent(\"\"\"\nStreaming returns tokens incrementally so people can read along.\nNon-streaming waits for the whole message, which is simpler for batch jobs\nor when you need atomic JSON payloads. Use streaming for interactive UIs,\nand non-streaming for deterministic post-processing pipelines.\n\"\"\").strip()\n\nprint(f\"OPENAI_BASE_URL -> {base_url}\")\nprint(explanation)\n"
+    },
+    {
+      "step_order": 2,
+      "title": "Streaming Demo",
+      "content": "Stream the model\u2019s response for the brief and capture the incremental chunks.",
+      "code_template": "introduction to harmony prompt format",
+      "model_params": {
+        "temperature": 0.5
+      },
+      "code": "from typing import List\n\nmessages = [\n    {\"role\": \"system\", \"content\": \"You help developers prototype streaming chat flows.\"},\n    {\"role\": \"user\", \"content\": \"introduction to harmony prompt format\"},\n]\n\nstream = client.chat.completions.create(\n    model=\"gpt-oss-20b\",\n    messages=messages,\n    temperature=0.5,\n    stream=True,\n)\n\nstream_chunks: List[str] = []\nprint(\"Streaming reply:\\n\")\nfor chunk in stream:\n    choice = chunk.choices[0]\n    delta = getattr(choice, \"delta\", None) or {}\n    text = delta.get(\"content\")\n    if text:\n        print(text, end=\"\", flush=True)\n        stream_chunks.append(text)\n\nprint()\nstreamed_reply = \"\".join(stream_chunks)\n"
+    },
+    {
+      "step_order": 3,
+      "title": "Telemetry",
+      "content": "Capture latency and token usage from the response. Re-use the streaming summary to gather quick telemetry.",
+      "code_template": "Summarize key points in 4 bullets and keep under 120 tokens.",
+      "model_params": {
+        "temperature": 0.7
+      },
+      "code": "import time\n\ntelemetry_prompt = (\n    \"Summarize the streaming walkthrough in four concise bullet points. \"\n    \"Keep the answer under 120 tokens.\"\n)\n\nstart = time.perf_counter()\ntelemetry_response = client.chat.completions.create(\n    model=\"gpt-oss-20b\",\n    messages=[\n        {\"role\": \"system\", \"content\": \"You are a concise telemetry aide.\"},\n        {\"role\": \"user\", \"content\": telemetry_prompt},\n    ],\n    temperature=0.7,\n    max_tokens=256,\n)\nelapsed = time.perf_counter() - start\n\ncompletion_message = telemetry_response.choices[0].message\nprint(completion_message.get(\"content\", \"(no content returned)\"))\n\nusage = getattr(telemetry_response, \"usage\", None)\nif usage:\n    print(\n        f\"Latency: {elapsed:.2f}s | prompt_tokens={usage.prompt_tokens} \"\n        f\"completion_tokens={usage.completion_tokens} total_tokens={usage.total_tokens}\"\n    )\nelse:\n    print(f\"Latency: {elapsed:.2f}s (token usage unavailable)\")\n"
+    }
+  ],
+  "assessments": [
+    {
+      "question": "Which env var provides the Poe key?",
+      "options": [
+        "OPENAI_BASE_URL",
+        "POE_API_KEY",
+        "NEXT_RUNTIME",
+        "HF_TOKEN"
+      ],
+      "correct_index": 1,
+      "explanation": "Poe auth uses POE_API_KEY; the code maps it to OPENAI_API_KEY at runtime."
+    }
+  ]
+}

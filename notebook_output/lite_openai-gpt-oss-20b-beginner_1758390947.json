@@ -1,0 +1,48 @@
+{
+  "title": "Lite Notebook \u00b7 openai/gpt-oss-20b \u00b7 Beginner",
+  "description": "Token\u2011light tutorial: environment setup + runnable calls. Uses OpenAI SDK against selected provider (Poe/OpenAI\u2011compatible/local).",
+  "provider": "poe",
+  "model": "gpt-oss-20b",
+  "learning_objectives": [
+    "Configure provider and API key correctly",
+    "Run a model call with safe defaults",
+    "Tune basic parameters and/or streaming",
+    "Record simple telemetry or ranking step"
+  ],
+  "steps": [
+    {
+      "step_order": 1,
+      "title": "Environment & Client Setup",
+      "content": "Configure OpenAI\u2011compatible client with provider defaults.\n\nTip: Keep secrets in .env.local (POE_API_KEY or OPENAI_API_KEY).",
+      "code_template": "Print the configured OPENAI_BASE_URL and run a 1\u2011line hello to verify."
+    },
+    {
+      "step_order": 2,
+      "title": "First Chat Completion",
+      "content": "Send your brief to the model and print the reply.",
+      "code_template": "Show me a minimal streaming chat example with tips."
+    },
+    {
+      "step_order": 3,
+      "title": "Adjust Parameters",
+      "content": "Experiment with temperature and max_tokens.",
+      "code_template": "Respond to the same topic but more concise. Model: gpt-oss-20b",
+      "model_params": {
+        "temperature": 0.7
+      }
+    }
+  ],
+  "assessments": [
+    {
+      "question": "Which env var provides the Poe key?",
+      "options": [
+        "OPENAI_BASE_URL",
+        "POE_API_KEY",
+        "NEXT_RUNTIME",
+        "HF_TOKEN"
+      ],
+      "correct_index": 1,
+      "explanation": "Poe auth uses POE_API_KEY; the code maps it to OPENAI_API_KEY at runtime."
+    }
+  ]
+}

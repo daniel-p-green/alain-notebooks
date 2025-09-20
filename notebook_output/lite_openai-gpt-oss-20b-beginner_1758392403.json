@@ -1,0 +1,48 @@
+{
+  "title": "Lite Notebook \u00b7 openai/gpt-oss-20b \u00b7 Beginner",
+  "description": "Token\u2011light tutorial: environment setup + runnable calls. Uses OpenAI SDK against selected provider (Poe/OpenAI\u2011compatible/local).",
+  "provider": "poe",
+  "model": "gpt-oss-20b",
+  "learning_objectives": [
+    "Configure provider and API key correctly",
+    "Run a model call with safe defaults",
+    "Tune basic parameters and/or streaming",
+    "Record simple telemetry or ranking step"
+  ],
+  "steps": [
+    {
+      "step_order": 1,
+      "title": "Environment & Client Setup",
+      "content": "Configure an OpenAI-compatible client pointed at Poe and confirm the model you plan to use.",
+      "code": "# Step 1: Environment & Client Setup\n# Offline-friendly: gate live API calls behind RUN_LIVE.\n\nfrom __future__ import annotations\n\nimport os\nimport random\nimport subprocess\nimport sys\nfrom importlib import import_module\nfrom pathlib import Path\n\n\nRUN_LIVE = os.getenv(\"RUN_LIVE\", \"0\").strip() in (\"1\", \"true\", \"True\")\n# Determinism knobs (used by quality gate and examples)\nSEED = int(os.getenv(\"SEED\", \"42\"))\nrandom.seed(SEED)\ntry:\n    import numpy as _np  # type: ignore\nexcept Exception as _e:  # pragma: no cover\n    _np = None\nif _np is not None:\n    _np.random.seed(SEED)\n\ndef _ensure_package(module: str, pip_name: str | None = None) -> None:\n    # Install a module on demand to keep the notebook self-contained.\n    try:\n        import_module(module)\n    except Exception:  # pragma: no cover\n        if not RUN_LIVE:\n            return\n        subprocess.check_call([sys.executable, \"-m\", \"pip\", \"install\", pip_name or module])\n\n\n_ensure_package(\"dotenv\", \"python-dotenv\")\n\ntry:\n    from dotenv import load_dotenv\nexcept ImportError:\n    load_dotenv = None\n\n\ndef _ingest_env_file(path: Path) -> None:\n    # Load key=value pairs without overwriting existing values.\n    if load_dotenv:\n        load_dotenv(path, override=False)\n        return\n    if not path.exists():\n        return\n    for line in path.read_text(encoding=\"utf-8\").splitlines():\n        stripped = line.strip()\n        if not stripped or stripped.startswith(\"#\") or \"=\" not in stripped:\n            continue\n        key, value = stripped.split(\"=\", 1)\n        os.environ.setdefault(key.strip(), value.strip())\n\n\nfor candidate in (Path(\".env\"), Path(\".env.local\")):\n    _ingest_env_file(candidate)\n\nif os.getenv(\"POE_API_KEY\") and not os.getenv(\"OPENAI_API_KEY\"):\n    os.environ[\"OPENAI_API_KEY\"] = os.environ[\"POE_API_KEY\"]\n\nBASE_URL = os.environ.setdefault(\"OPENAI_BASE_URL\", \"https://api.poe.com/v1\")\nAPI_KEY = os.getenv(\"OPENAI_API_KEY\")\n\nMODEL_ID = \"gpt-oss-20b\"\n\nif RUN_LIVE:\n    _ensure_package(\"openai\")\n    from openai import OpenAI\n    client = OpenAI(base_url=BASE_URL, api_key=API_KEY)\n    if not API_KEY:\n        raise RuntimeError(\"Set POE_API_KEY or OPENAI_API_KEY before continuing.\")\nelse:\n    # Deterministic stub client for smoke tests/offline execution.\n    class _Msg:\n        def __init__(self, content: str):\n            self.content = content\n\n    class _Choice:\n        def __init__(self, content: str):\n            self.message = _Msg(content)\n\n    class _Reply:\n        def __init__(self, content: str):\n            self.choices = [_Choice(content)]\n            class _U:\n                'usage container'\n            self.usage = _U()\n            self.usage.prompt_tokens = 0\n            self.usage.completion_tokens = 0\n\n    class _DummyCompletions:\n        def create(self, *, model: str, messages, **kwargs):  # type: ignore[no-untyped-def]\n            if isinstance(messages, (list, tuple)):\n                prompt = next(\n                    (m.get(\"content\", \"\") for m in messages if isinstance(m, dict) and m.get(\"role\") == \"user\"),\n                    \"\",\n                )\n            else:\n                prompt = \"\"\n            return _Reply(\"[SMOKE] Echo from \" + str(model) + \" \u2192 \" + str(prompt))\n\n    class _DummyChat:\n        def __init__(self):\n            self.completions = _DummyCompletions()\n\n    class _DummyClient:\n        def __init__(self, *a, **k):\n            self.chat = _DummyChat()\n\n    client = _DummyClient()\n\nprint(f\"Base URL \u2192 {BASE_URL}\")\nprint(f\"Client ready for model \u2192 {MODEL_ID} (RUN_LIVE={RUN_LIVE})\")\nprint(f\"Seed \u2192 {SEED}\")"
+    },
+    {
+      "step_order": 2,
+      "title": "First Chat Completion",
+      "content": "Send your brief to the model with safe defaults and review the reply.",
+      "code": "# Step 2: First Chat Completion\n# Draft a short helper that sends the user brief to the model once.\n\ndef _guardrail_block(prompt: str) -> None:\n    # Optional guardrail: block risky prompts when enabled (ENABLE_GUARDRAILS=1).\n    enabled = os.getenv(\"ENABLE_GUARDRAILS\", \"0\").strip() in (\"1\", \"true\", \"True\")\n    if not enabled:\n        return\n    text = (prompt or \"\").lower()\n    risky = (\"rm -rf\" in text) or (\"api key\" in text) or (\"password\" in text)\n    if risky:\n        raise ValueError(\"Blocked by guardrails: prompt contains risky terms.\")\n\ndef _show_request(params: dict) -> None:\n    # Print a cURL-like view of the request for transparency.\n    try:\n        import json as _json\n        payload = {\n            \"model\": params[\"model\"],\n            \"messages\": params[\"messages\"],\n            \"max_tokens\": params.get(\"max_tokens\", 256),\n            \"temperature\": params.get(\"temperature\", 0),\n        }\n        curl = (\n            \"curl -sS -X POST \"\" + os.getenv(\"OPENAI_BASE_URL\", \"https://api.poe.com/v1\") + \"/chat/completions\" \"\n            \"-H 'Content-Type: application/json' \"\n            \"-H 'Authorization: Bearer $OPENAI_API_KEY' \"\n            \"-d '\" + _json.dumps(payload).replace(\"'\", \"\\'\") + \"'\"\n        )\n        print(\"Show Request (cURL):\")\n        print(curl)\n    except Exception:\n        pass\n\ndef _cost_hint(model: str) -> str:\n    # Minimal, static hints where known; otherwise N/A.\n    table = {}\n    return table.get(model, \"N/A\")\n\ndef run_once(prompt: str) -> str:\n    # Call the Poe-hosted model with safe defaults and return the text.\n    _guardrail_block(prompt)\n    temperature = float(os.getenv(\"TEMP_OVERRIDE\", os.getenv(\"TEMPERATURE\", \"0.6\")))\n    params = dict(\n        model=MODEL_ID,\n        messages=[\n            {\"role\": \"system\", \"content\": \"You are a patient teacher.\"},\n            {\"role\": \"user\", \"content\": prompt},\n        ],\n        max_tokens=320,\n        temperature=temperature,\n    )\n    try:\n        response = client.chat.completions.create(**params)\n    except Exception as e:\n        print(f\"Live request failed: {e}\")\n        print(\"Show sample output:\")\n        return \"[SAMPLE OUTPUT] This is a representative reply shown when the provider is unavailable.\"\n    _show_request(params)\n    choice = response.choices[0].message.content\n    print(f\"Prompt tokens \u2192 {getattr(response.usage, 'prompt_tokens', 'N/A')}, completion \u2192 {getattr(response.usage, 'completion_tokens', 'N/A')}\")\n    hint = _cost_hint(MODEL_ID)\n    print(f\"Cost hint \u2192 {hint}\")\n    return choice\n\n\nfirst_reply = run_once('Quality gate smoke')\nprint(\"\\nModel reply:\\n\")\nprint(first_reply)"
+    },
+    {
+      "step_order": 3,
+      "title": "Adjust Parameters",
+      "content": "Contrast two temperatures to see how the narrative changes.",
+      "code": "# Step 3: Adjust Parameters\n# Compare two temperatures to see how tone and verbosity change.\n\ndef compare_temperatures(prompt: str, temperatures: tuple[float, float]) -> None:\n    for temp in temperatures:\n        print(f\"\\n--- Temperature {temp} ---\")\n        reply = client.chat.completions.create(\n            model=MODEL_ID,\n            messages=[\n                {\"role\": \"system\", \"content\": \"You teach with concise, friendly explanations.\"},\n                {\"role\": \"user\", \"content\": prompt},\n            ],\n            max_tokens=280,\n            temperature=temp,\n        )\n        print(reply.choices[0].message.content.strip())\n\n\ncompare_temperatures('Quality gate smoke', (0.2, 0.8))",
+      "model_params": {
+        "temperature": 0.6
+      }
+    }
+  ],
+  "assessments": [
+    {
+      "question": "Which env var provides the Poe key?",
+      "options": [
+        "OPENAI_BASE_URL",
+        "POE_API_KEY",
+        "NEXT_RUNTIME",
+        "HF_TOKEN"
+      ],
+      "correct_index": 1,
+      "explanation": "Poe auth uses POE_API_KEY; the code maps it to OPENAI_API_KEY at runtime."
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "8177185d",
+   "metadata": {},
+   "source": [
+    "# Lite Notebook · openai/gpt-oss-20b · Beginner"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "818bc6a0",
+   "metadata": {},
+   "source": [
+    "Token‑light tutorial: environment setup + runnable calls. Uses OpenAI SDK against selected provider (Poe/OpenAI‑compatible/local).\n",
+    "\n",
+    "**Provider:** `poe`\n",
+    "\n",
+    "**Default model:** `gpt-oss-20b`\n",
+    "\n",
+    "**Learning objectives**:\n",
+    "- Configure provider and API key correctly\n",
+    "- Run a model call with safe defaults\n",
+    "- Tune basic parameters and/or streaming\n",
+    "- Record simple telemetry or ranking step"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3eda0eee",
+   "metadata": {},
+   "source": [
+    "## Environment & Client Setup\n",
+    "\n",
+    "Configure an OpenAI-compatible client pointed at Poe and confirm the model you plan to use."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "da5d626f",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Step 1: Environment & Client Setup\n",
+    "# Install lightweight helpers for local experimentation.\n",
+    "\n",
+    "from __future__ import annotations\n",
+    "\n",
+    "import os\n",
+    "import subprocess\n",
+    "import sys\n",
+    "from importlib import import_module\n",
+    "from pathlib import Path\n",
+    "\n",
+    "\n",
+    "def _ensure_package(module: str, pip_name: str | None = None) -> None:\n",
+    "    # Install a module on demand to keep the notebook self-contained.\n",
+    "\n",
+    "    try:\n",
+    "        import_module(module)\n",
+    "    except Exception:  # pragma: no cover\n",
+    "        subprocess.check_call([sys.executable, \"-m\", \"pip\", \"install\", pip_name or module])\n",
+    "\n",
+    "\n",
+    "_ensure_package(\"openai\")\n",
+    "_ensure_package(\"dotenv\", \"python-dotenv\")\n",
+    "\n",
+    "try:\n",
+    "    from dotenv import load_dotenv\n",
+    "except ImportError:\n",
+    "    load_dotenv = None\n",
+    "\n",
+    "\n",
+    "def _ingest_env_file(path: Path) -> None:\n",
+    "    # Load key=value pairs without overwriting existing values.\n",
+    "\n",
+    "    if load_dotenv:\n",
+    "        load_dotenv(path, override=False)\n",
+    "        return\n",
+    "    for line in path.read_text(encoding=\"utf-8\").splitlines():\n",
+    "        stripped = line.strip()\n",
+    "        if not stripped or stripped.startswith(\"#\") or \"=\" not in stripped:\n",
+    "            continue\n",
+    "        key, value = stripped.split(\"=\", 1)\n",
+    "        os.environ.setdefault(key.strip(), value.strip())\n",
+    "\n",
+    "\n",
+    "for candidate in (Path(\".env\"), Path(\".env.local\")):\n",
+    "    if candidate.exists():\n",
+    "        _ingest_env_file(candidate)\n",
+    "\n",
+    "if os.getenv(\"POE_API_KEY\") and not os.getenv(\"OPENAI_API_KEY\"):\n",
+    "    os.environ[\"OPENAI_API_KEY\"] = os.environ[\"POE_API_KEY\"]\n",
+    "\n",
+    "BASE_URL = os.environ.setdefault(\"OPENAI_BASE_URL\", \"https://api.poe.com/v1\")\n",
+    "API_KEY = os.getenv(\"OPENAI_API_KEY\")\n",
+    "if not API_KEY:\n",
+    "    raise RuntimeError(\"Set POE_API_KEY or OPENAI_API_KEY before continuing.\")\n",
+    "\n",
+    "from openai import OpenAI\n",
+    "\n",
+    "MODEL_ID = \"gpt-oss-20b\"\n",
+    "client = OpenAI(base_url=BASE_URL, api_key=API_KEY)\n",
+    "\n",
+    "print(f\"Base URL → {BASE_URL}\")\n",
+    "print(f\"Client ready for model → {MODEL_ID}\")\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "28c7b82e",
+   "metadata": {},
+   "source": [
+    "## First Chat Completion\n",
+    "\n",
+    "Send your brief to the model with safe defaults and review the reply."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "96441173",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Step 2: First Chat Completion\n",
+    "# Draft a short helper that sends the user brief to the model once.\n",
+    "\n",
+    "def run_once(prompt: str) -> str:\n",
+    "    # Call the Poe-hosted model with safe defaults and return the text.\n",
+    "\n",
+    "    response = client.chat.completions.create(\n",
+    "        model=MODEL_ID,\n",
+    "        messages=[\n",
+    "            {\"role\": \"system\", \"content\": \"You are a patient teacher.\"},\n",
+    "            {\"role\": \"user\", \"content\": prompt},\n",
+    "        ],\n",
+    "        max_tokens=320,\n",
+    "        temperature=0.6,\n",
+    "    )\n",
+    "    choice = response.choices[0].message.content\n",
+    "    print(f\"Prompt tokens → {response.usage.prompt_tokens}, completion → {response.usage.completion_tokens}\")\n",
+    "    return choice\n",
+    "\n",
+    "\n",
+    "first_reply = run_once('Show me a minimal streaming chat example with tips.')\n",
+    "print(\"\\nModel reply:\\n\")\n",
+    "print(first_reply)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9f5eb011",
+   "metadata": {},
+   "source": [
+    "## Adjust Parameters\n",
+    "\n",
+    "Contrast two temperatures to see how the narrative changes.\n",
+    "\n",
+    "**Suggested model parameters**:\n",
+    "- `temperature` = `0.6`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "42bfcaa8",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "            # Step 3: Adjust Parameters\n",
+    "            # Compare two temperatures to see how tone and verbosity change.\n",
+    "\n",
+    "            def compare_temperatures(prompt: str, temperatures: tuple[float, float]) -> None:\n",
+    "                for temp in temperatures:\n",
+    "                    print(f\"\n",
+    "--- Temperature {temp} ---\")\n",
+    "                    reply = client.chat.completions.create(\n",
+    "                        model=MODEL_ID,\n",
+    "                        messages=[\n",
+    "                            {\"role\": \"system\", \"content\": \"You teach with concise, friendly explanations.\"},\n",
+    "                            {\"role\": \"user\", \"content\": prompt},\n",
+    "                        ],\n",
+    "                        max_tokens=280,\n",
+    "                        temperature=temp,\n",
+    "                    )\n",
+    "                    print(reply.choices[0].message.content.strip())\n",
+    "\n",
+    "\n",
+    "            compare_temperatures({safe_brief}, (0.2, 0.8))\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "bd9820ff",
+   "metadata": {},
+   "source": [
+    "## Quick assessment\n",
+    "\n",
+    "Which env var provides the Poe key?\n",
+    "- [ ] OPENAI_BASE_URL\n",
+    "- [x] POE_API_KEY\n",
+    "- [ ] NEXT_RUNTIME\n",
+    "- [ ] HF_TOKEN\n",
+    "\n",
+    "_Explanation_: Poe auth uses POE_API_KEY; the code maps it to OPENAI_API_KEY at runtime."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

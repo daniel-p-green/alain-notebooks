@@ -1,0 +1,139 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "53dbe265",
+   "metadata": {},
+   "source": [
+    "# Lite Notebook · openai/gpt-oss-20b · Intermediate"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0313303e",
+   "metadata": {},
+   "source": [
+    "Token‑light tutorial: environment setup + runnable calls. Uses OpenAI SDK against selected provider (Poe/OpenAI‑compatible/local).\n",
+    "\n",
+    "**Provider:** `poe`\n",
+    "\n",
+    "**Default model:** `gpt-oss-20b`\n",
+    "\n",
+    "**Learning objectives**:\n",
+    "- Configure provider and API key correctly\n",
+    "- Run a model call with safe defaults\n",
+    "- Tune basic parameters and/or streaming\n",
+    "- Record simple telemetry or ranking step"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "34d38258",
+   "metadata": {},
+   "source": [
+    "## Streaming Basics\n",
+    "\n",
+    "Use streaming to improve perceived latency. Parse chunks safely."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "b913f2c5",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Step 1: Streaming Basics\n",
+    "# Guidance from template:\n",
+    "# Explain streaming vs. non‑streaming and when to use each.\n",
+    "\n",
+    "# TODO: implement the step above.\n",
+    "pass"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "87173ef0",
+   "metadata": {},
+   "source": [
+    "## Streaming Demo\n",
+    "\n",
+    "Stream the model’s response for the brief.\n",
+    "\n",
+    "**Suggested model parameters**:\n",
+    "- `temperature` = `0.5`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "6eeb4c18",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Step 2: Streaming Demo\n",
+    "# Guidance from template:\n",
+    "# introduction to harmony prompt format\n",
+    "\n",
+    "# TODO: implement the step above.\n",
+    "pass"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "40b0c4c3",
+   "metadata": {},
+   "source": [
+    "## Telemetry\n",
+    "\n",
+    "Capture latency and token usage from the response.\n",
+    "\n",
+    "**Suggested model parameters**:\n",
+    "- `temperature` = `0.7`"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "e60cd6c0",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Step 3: Telemetry\n",
+    "# Guidance from template:\n",
+    "# Summarize key points in 4 bullets and keep under 120 tokens.\n",
+    "\n",
+    "# TODO: implement the step above.\n",
+    "pass"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "05593a65",
+   "metadata": {},
+   "source": [
+    "## Quick assessment\n",
+    "\n",
+    "Which env var provides the Poe key?\n",
+    "- [ ] OPENAI_BASE_URL\n",
+    "- [x] POE_API_KEY\n",
+    "- [ ] NEXT_RUNTIME\n",
+    "- [ ] HF_TOKEN\n",
+    "\n",
+    "_Explanation_: Poe auth uses POE_API_KEY; the code maps it to OPENAI_API_KEY at runtime."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "name": "python3"
+  },
+  "language_info": {
+   "name": "python",
+   "version": "3.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

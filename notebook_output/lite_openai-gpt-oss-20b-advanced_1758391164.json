@@ -1,0 +1,51 @@
+{
+  "title": "Lite Notebook \u00b7 openai/gpt-oss-20b \u00b7 Advanced",
+  "description": "Token\u2011light tutorial: environment setup + runnable calls. Uses OpenAI SDK against selected provider (Poe/OpenAI\u2011compatible/local).",
+  "provider": "poe",
+  "model": "gpt-oss-20b",
+  "learning_objectives": [
+    "Configure provider and API key correctly",
+    "Run a model call with safe defaults",
+    "Tune basic parameters and/or streaming",
+    "Record simple telemetry or ranking step"
+  ],
+  "steps": [
+    {
+      "step_order": 1,
+      "title": "Provider Swap & Guardrails",
+      "content": "Note the base URL and key expectations for Poe vs. gateways.",
+      "code_template": "Print which provider is active and any detected model name."
+    },
+    {
+      "step_order": 2,
+      "title": "Pairwise Compare",
+      "content": "Call the same prompt on two models and print side\u2011by\u2011side outputs.",
+      "code_template": "introduction to harmony prompt format",
+      "model_params": {
+        "temperature": 0.3
+      }
+    },
+    {
+      "step_order": 3,
+      "title": "Mini Elo Update",
+      "content": "Apply a single Elo update assuming model A won. Show new ratings.",
+      "code_template": "Given ratings rA=1500, rB=1500 and outcome A=win, compute new Elo with K=24.",
+      "model_params": {
+        "temperature": 0.7
+      }
+    }
+  ],
+  "assessments": [
+    {
+      "question": "Which env var provides the Poe key?",
+      "options": [
+        "OPENAI_BASE_URL",
+        "POE_API_KEY",
+        "NEXT_RUNTIME",
+        "HF_TOKEN"
+      ],
+      "correct_index": 1,
+      "explanation": "Poe auth uses POE_API_KEY; the code maps it to OPENAI_API_KEY at runtime."
+    }
+  ]
+}
